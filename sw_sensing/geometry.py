@@ -944,6 +944,13 @@ def generate_all_geometries(
         else max_rad
     )
 
+    aiming_r = resistor_trace_fill_kwargs["aiming_resistance"]
+    aiming_resistances = (
+        [aiming_r] * len(set_of_link_path_positions)
+        if np.ndim(aiming_r) == 0
+        else aiming_r
+    )
+
     # TODO: trace generation between connection_start and first node
     # and connection_end and last node are redundant here (can reduce computation time)
     resistor_traces = [
@@ -954,6 +961,7 @@ def generate_all_geometries(
             **{
                 **resistor_trace_fill_kwargs,
                 "max_fill_area_radius": max_fill_area_radii[i],
+                "aiming_resistance": aiming_resistances[i],
             },
         )
         for i, link_path_positions in enumerate(set_of_link_path_positions)
