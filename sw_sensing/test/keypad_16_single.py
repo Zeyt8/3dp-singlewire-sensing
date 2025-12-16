@@ -21,6 +21,21 @@ def generate_circuit():
 
 if __name__ == "__main__":
     substitute = lambda resistances, node: {"r0": resistances[0], "r1": sum(resistances[1:node])}
+    # simulate initial values
+    print("= INITIAL RESISTANCES =\n")
     resistances = [432837, 409632, 449660, 419437, 401071, 378266, 411354, 402799, 392903, 447375, 401663, 403171, 433107, 404175, 396619]
     resistances = [r * 0.23 for r in resistances]
-    check([2300e3] + resistances, generate_circuit, substitute)
+    check([2300e3] + resistances, generate_circuit, substitute, True)
+    # calculate new values and simulate
+    print("\n= IDEAL VALUES =\n")
+    maxes = [462147, 409632, 456646, 457509, 401071, 378266, 467924, 402799, 392903, 466741, 401663, 403171, 475801, 404175, 396619]
+    maxes = [r * 0.23 for r in maxes]
+    r1, resistances = get_new_resistances(maxes, single_wire=True)
+    check([r1] + resistances, generate_circuit, substitute, True)
+    print(f"\nMinimum R1: {int(r1)}")
+    print("Optimized resistances:")
+    print("[" + ", ".join(f"{int(r)}" for r in resistances) + "]")
+    # simulate actual possible values
+    print("\n= ACTUAL POSSIBLE VALUES =\n")
+    resistances = [106282.45292145321, 98372.21176184688, 23031.50883575576, 95099.33838280731, 74263.14521716886, 67446.37266744737, 61403.812109792234, 55454.954148189776, 50508.54053194302, 46116.1950063792, 38519.75146200466, 36771.50436843857, 34561.500017412174, 45379.90752711366, 23347.750615425386]
+    check([r1] + resistances, generate_circuit, substitute, True)
