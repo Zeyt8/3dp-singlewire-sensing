@@ -52,7 +52,7 @@ def get_epsilon_bounds(node: int, r: list[float], single_wire: bool) -> tuple[fl
 
 def check(resistances: list[float], generate_circuit, substitute: dict[str, float], single_wire: bool=False) -> None:
     times = []
-    smallest_epsilon = float('inf')
+    epsilons = []
     for node in range(1, len(resistances) + 1):
         cct = generate_circuit()
         transfer = sy.simplify(cct.pin2.V.transient_response().sympy)
@@ -66,13 +66,18 @@ def check(resistances: list[float], generate_circuit, substitute: dict[str, floa
                 break
 
         ans = sy.solveset(eq, tsymbol, domain=sy.core.S.Reals)
+        #ans = sy.nsolve(eq, tsymbol, (0, 2*7.5940e-6), solver='bisect', verify=False)
         t_thres = ans.args[0] if len(ans.args) > 0 else np.nan
 
         eps_lower_bound, eps_upper_bound = get_epsilon_bounds(node, resistances, single_wire)
+        if np.isnan(eps_lower_bound):
+            eps_lower_bound = -eps_upper_bound
+        if np.isnan(eps_upper_bound):
+            eps_upper_bound = -eps_lower_bound
         eps_range = abs(eps_upper_bound - eps_lower_bound)
         print(f"Node: {node}, Threshold time: {t_thres * 1e6:.4f} us (+{t_thres * 1e6 - times[-1] if times else 0:.4f} us), Epsilon range: {eps_range:.2f} e-12")
-        smallest_epsilon = min(smallest_epsilon, eps_range)
         times.append(t_thres * 1e6)
+        epsilons.append(eps_range)
 
     smallest_gap = float('inf')
     for i in range(1, len(times)):
@@ -80,4 +85,6 @@ def check(resistances: list[float], generate_circuit, substitute: dict[str, floa
         if gap < smallest_gap:
             smallest_gap = gap
     print(f"\nSmallest gap between thresholds: {smallest_gap:.4f} us")
-    print(f"Smallest epsilon range: {smallest_epsilon}")
+    print(f"Smallest epsilon range: {min(epsilons):.2f} e-12")
+    print(f"Average epsilon range: {sum(epsilons)/len(epsilons):.2f} e-12")
+    print(f"Average epsilon range without first node: {sum(epsilons[1:])/len(epsilons[1:]):.2f} e-12")
