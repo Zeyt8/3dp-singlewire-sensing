@@ -20,11 +20,12 @@ def generate_circuit(extra_c=False):
     cct.add("C0 c 0 c0; down, ground")
     
     return cct
+    
+base_circuit = lambda : generate_circuit(False)
+circuit_with_extra_c = lambda : generate_circuit(True)
+substitute = lambda resistances, node: {"r0": resistances[0], "r1": sum(resistances[1:node]), "c0": 100e-12, "c1": 100e-12}
 
 if __name__ == "__main__":
-    substitute = lambda resistances, node: {"r0": resistances[0], "r1": sum(resistances[1:node]), "c0": 100e-12, "c1": 100e-6}
-    base_circuit = lambda : generate_circuit(False)
-    circuit_with_extra_c = lambda : generate_circuit(True)
     # simulate initial values
     print("= INITIAL RESISTANCES =\n")
     resistances = [432837, 409632, 449660, 419437, 401071, 378266, 411354, 402799, 392903, 447375, 401663, 403171, 433107, 404175, 396619]

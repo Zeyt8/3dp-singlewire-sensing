@@ -50,24 +50,22 @@ def get_epsilon_bounds(node: int, r: list[float], single_wire: bool) -> tuple[fl
 
     return eps_lower_bound, eps_upper_bound
 
-def check(resistances: list[float], generate_circuit, substitute: dict[str, float], single_wire: bool=False) -> None:
+def check(resistances: list[float], generate_circuit, substitute: dict[str, float], single_wire: bool=False) -> tuple[list[float], list[float]]:
     times = []
     epsilons = []
+    cct = generate_circuit()
+    transfer = sy.simplify(cct.pin2.V.transient_response().sympy)
+    for symbol in transfer.free_symbols:
+        if symbol.name == "t":
+            tsymbol = symbol
+            break
     for node in range(1, len(resistances) + 1):
-        cct = generate_circuit()
-        transfer = sy.simplify(cct.pin2.V.transient_response().sympy)
-
         eq = substitute_symbols(
             sy.Eq(transfer, 2.5), substitute(resistances, node)
         )
-        for symbol in transfer.free_symbols:
-            if symbol.name == "t":
-                tsymbol = symbol
-                break
-
-        ans = sy.solveset(eq, tsymbol, domain=sy.core.S.Reals)
-        #ans = sy.nsolve(eq, tsymbol, (0, 2*7.5940e-6), solver='bisect', verify=False)
-        t_thres = ans.args[0] if len(ans.args) > 0 else np.nan
+        #ans = sy.solveset(eq, tsymbol, domain=sy.core.S.Reals)
+        t_thres = sy.nsolve(eq, tsymbol, (0, 1e-2), solver='bisect', verify=False)
+        #t_thres = ans.args[0] if len(ans.args) > 0 else np.nan
 
         eps_lower_bound, eps_upper_bound = get_epsilon_bounds(node, resistances, single_wire)
         if np.isnan(eps_lower_bound):
@@ -75,8 +73,8 @@ def check(resistances: list[float], generate_circuit, substitute: dict[str, floa
         if np.isnan(eps_upper_bound):
             eps_upper_bound = -eps_lower_bound
         eps_range = abs(eps_upper_bound - eps_lower_bound)
-        print(f"Node: {node}, Threshold time: {t_thres * 1e6:.4f} us (+{t_thres * 1e6 - times[-1] if times else 0:.4f} us), Epsilon range: {eps_range:.2f} e-12")
-        times.append(t_thres * 1e6)
+        print(f"Node: {node}, Threshold time: {t_thres * 1e6:.4f} us (+{(t_thres - times[-1] if times else 0) * 1e6:.4f} us), Epsilon range: {eps_range:.2f} e-12")
+        times.append(t_thres)
         epsilons.append(eps_range)
 
     smallest_gap = float('inf')
@@ -84,7 +82,32 @@ def check(resistances: list[float], generate_circuit, substitute: dict[str, floa
         gap = times[i] - times[i - 1]
         if gap < smallest_gap:
             smallest_gap = gap
-    print(f"\nSmallest gap between thresholds: {smallest_gap:.4f} us")
+    print(f"\nSmallest gap between thresholds: {smallest_gap * 1e6:.4f} us")
     print(f"Smallest epsilon range: {min(epsilons):.2f} e-12")
     print(f"Average epsilon range: {sum(epsilons)/len(epsilons):.2f} e-12")
     print(f"Average epsilon range without first node: {sum(epsilons[1:])/len(epsilons[1:]):.2f} e-12")
+
+    return times, epsilons
+
+def compute_epsilons_with_extra_c(thresholds: list[float], previous_epsilons: list[float], resistances: list[float], generate_circuit, substitute: dict[str, float], single_wire: bool=False) -> None:
+    cct = generate_circuit()
+    transfer = sy.simplify(cct.pin2.V.transient_response().sympy)
+    for symbol in transfer.free_symbols:
+        if symbol.name == "t":
+            tsymbol = symbol
+            break
+    for node in range(1, len(resistances) + 1):
+        for noise in range(0, 100):
+            #print(f"Testing node {node} with noise {noise} pF")
+            substitution = substitute(resistances, node)
+            substitution['c0'] += noise * 1e-12
+            eq = substitute_symbols(
+                sy.Eq(transfer, 2.5), substitution
+            )
+            ans = sy.nsolve(eq, tsymbol, (0, 1e-2), solver='bisect', verify=False)
+            # check which threshold this is the closest to
+            closest_threshold = min(thresholds, key=lambda x: abs(x - ans))
+            #print(f"Detected threshold at time {ans * 1e6:.4f} us, closest known threshold at {closest_threshold * 1e6:.4f} us")
+            if thresholds.index(closest_threshold) + 1 != node:
+                print(f"Misread at noise {noise:.2f} pF (range: {noise * 2:.2f} pF, previous: {previous_epsilons[node-1]:.2f} pF): Detected node {thresholds.index(closest_threshold) + 1}, Actual node {node}")
+                break
