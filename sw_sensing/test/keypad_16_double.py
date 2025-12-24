@@ -14,13 +14,13 @@ def generate_circuit(extra_c=False):
         cct.add("C1 pin2 0 c1; down, ground")
     cct.add("Rx pin2 0 100e6; left=2, ground")
 
-    cct.add("W node_2 c; right=2")
+    cct.add("W node_2 c; right")
     cct.add("C0 c 0 c0; down, ground")
     
     return cct
 
-base_circuit = lambda : generate_circuit(False)
-circuit_with_extra_c = lambda : generate_circuit(True)
+base_circuit = generate_circuit(False)
+circuit_with_extra_c = generate_circuit(True)
 substitute = lambda resistances, node: {"r0": resistances[0], "r1": sum(resistances[1:node]), "r2": sum(resistances[node:]), "c0": 100e-12, "c1": 100e-12}
 
 if __name__ == "__main__":

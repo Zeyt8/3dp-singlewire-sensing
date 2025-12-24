@@ -50,10 +50,9 @@ def get_epsilon_bounds(node: int, r: list[float], single_wire: bool) -> tuple[fl
 
     return eps_lower_bound, eps_upper_bound
 
-def check(resistances: list[float], generate_circuit, substitute: dict[str, float], single_wire: bool=False) -> tuple[list[float], list[float]]:
+def check(resistances: list[float], cct, substitute: dict[str, float], single_wire: bool=False) -> tuple[list[float], list[float]]:
     times = []
     epsilons = []
-    cct = generate_circuit()
     transfer = sy.simplify(cct.pin2.V.transient_response().sympy)
     for symbol in transfer.free_symbols:
         if symbol.name == "t":
@@ -89,8 +88,7 @@ def check(resistances: list[float], generate_circuit, substitute: dict[str, floa
 
     return times, epsilons
 
-def compute_epsilons_with_extra_c(thresholds: list[float], previous_epsilons: list[float], resistances: list[float], generate_circuit, substitute: dict[str, float], single_wire: bool=False) -> None:
-    cct = generate_circuit()
+def compute_epsilons_with_extra_c(thresholds: list[float], previous_epsilons: list[float], resistances: list[float], cct, substitute: dict[str, float], single_wire: bool=False) -> None:
     transfer = sy.simplify(cct.pin2.V.transient_response().sympy)
     for symbol in transfer.free_symbols:
         if symbol.name == "t":

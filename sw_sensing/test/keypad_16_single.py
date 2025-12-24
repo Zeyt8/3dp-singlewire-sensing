@@ -8,7 +8,7 @@ def generate_circuit(extra_c=False):
     cct = lcapy.Circuit()
     cct.add("V pin5 0 step 5.0; down=1, ground")
     cct.add(f"R0 pin5 side_1 r0; right=2")
-    cct.add("W side_1 node_1; right=2")
+    cct.add("W side_1 node_1; right")
     cct.add(f"R1 node_1 node_2 r1; down")
     cct.add(f"W node_2 out; down")
     cct.add("W side_1 pin2; down=2")
@@ -16,13 +16,13 @@ def generate_circuit(extra_c=False):
         cct.add("C1 pin2 0 c1; right")
     cct.add("Rx pin2 0 100e6; left=2, ground")
 
-    cct.add(f"W node_2 c; right=2")
+    cct.add(f"W node_2 c; right")
     cct.add("C0 c 0 c0; down, ground")
     
     return cct
     
-base_circuit = lambda : generate_circuit(False)
-circuit_with_extra_c = lambda : generate_circuit(True)
+base_circuit = generate_circuit(False)
+circuit_with_extra_c = generate_circuit(True)
 substitute = lambda resistances, node: {"r0": resistances[0], "r1": sum(resistances[1:node]), "c0": 100e-12, "c1": 100e-12}
 
 if __name__ == "__main__":
