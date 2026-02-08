@@ -95,17 +95,25 @@ def compute_epsilons_with_extra_c(thresholds: list[float], previous_epsilons: li
             tsymbol = symbol
             break
     for node in range(1, len(resistances) + 1):
-        for noise in range(0, 100):
+        for noise in range(0, 250):
+            if not single_wire and node == len(resistances):
+                noise = -noise
+            if single_wire and node == 1:
+                noise = -noise
             #print(f"Testing node {node} with noise {noise} pF")
             substitution = substitute(resistances, node)
             substitution['c0'] += noise * 1e-12
             eq = substitute_symbols(
                 sy.Eq(transfer, 2.5), substitution
             )
-            ans = sy.nsolve(eq, tsymbol, (0, 1e-2), solver='bisect', verify=False)
+            try:
+                ans = sy.nsolve(eq, tsymbol, (0, 1e-2), solver='bisect', verify=False)
+            except:
+                print(f"Failed to solve for node {node} with noise {noise} pF")
+                continue
             # check which threshold this is the closest to
             closest_threshold = min(thresholds, key=lambda x: abs(x - ans))
             #print(f"Detected threshold at time {ans * 1e6:.4f} us, closest known threshold at {closest_threshold * 1e6:.4f} us")
             if thresholds.index(closest_threshold) + 1 != node:
-                print(f"Misread at noise {noise:.2f} pF (range: {noise * 2:.2f} pF, previous: {previous_epsilons[node-1]:.2f} pF): Detected node {thresholds.index(closest_threshold) + 1}, Actual node {node}")
+                print(f"Misread at noise {noise:.2f} pF (range: {noise * 2 - 1:.2f} pF, previous: {previous_epsilons[node-1]:.2f} pF): Detected node {thresholds.index(closest_threshold) + 1}, Actual node {node}")
                 break

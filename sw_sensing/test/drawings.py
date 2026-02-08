@@ -7,7 +7,7 @@ def generate_circuit_double(extra_c=False):
     cct.add("R1 node_1 node_2 r_till_p; down")
     cct.add("R2 node_2 pin2 r_after_p; down=1.1")
     if extra_c:
-        cct.add("C1 pin2 0 c1; down, ground")
+        cct.add("C1 pin5 node_1 c1; down, ground")
     cct.add("Rx pin2 0 100e6; left=2, ground")
 
     cct.add("W node_2 c; right")
