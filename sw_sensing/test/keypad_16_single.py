@@ -2,7 +2,7 @@ import lcapy
 import sympy as sy
 import numpy as np
 
-from common import check, get_new_resistances
+from common import check, get_new_resistances, compute_epsilons_with_extra_c
 
 def generate_circuit(extra_c=False):
     cct = lcapy.Circuit()
@@ -18,22 +18,45 @@ def generate_circuit(extra_c=False):
 
     cct.add(f"W node_2 c; right")
     cct.add("C0 c 0 c0; down, ground")
-    
+
     return cct
-    
-base_circuit = generate_circuit(False)
-circuit_with_extra_c = generate_circuit(True)
+
+def generate_circuit2(extra_c=False):
+    cct = lcapy.Circuit()
+    cct.add("V pin5 0 step 5.0; down=1, ground")
+    cct.add(f"R0 pin5 side_1 r0; right=2")
+    cct.add("W side_1 node_1; right")
+    cct.add(f"R1 node_1 node_2 r1; down")
+    cct.add(f"W node_2 out; down")
+    cct.add("W side_1 pin2; down=2")
+    cct.add("Rx pin2 0 100e6; left=2, ground")
+
+    cct.add(f"W node_2 c; right")
+    cct.add("C0 c 0 c0; down, ground")
+    if extra_c:
+        cct.add("C1 c 0 c1; up, ground")
+
+    return cct
+
+base_circuit = generate_circuit2(False)
+circuit_with_extra_c = generate_circuit2(True)
 substitute = lambda resistances, node: {"r0": resistances[0], "r1": sum(resistances[1:node]), "c0": 100e-12, "c1": 100e-12}
+
+resistances16 = [432837, 409632, 449660, 419437, 401071, 378266, 411354, 402799, 392903, 447375, 401663, 403171, 433107, 404175, 396619]
+maxes16 =       [462147, 409632, 456646, 457509, 401071, 378266, 467924, 402799, 392903, 466741, 401663, 403171, 475801, 404175, 396619]
+actual16 = [106282.45292145321, 98372.21176184688, 23031.50883575576, 95099.33838280731, 74263.14521716886, 67446.37266744737, 61403.812109792234, 55454.954148189776, 50508.54053194302, 46116.1950063792, 38519.75146200466, 36771.50436843857, 34561.500017412174, 45379.90752711366, 23347.750615425386]
+maxes9 = [349327.1633990268, 353203.22852621845, 410204.5749207541, 403308.20953412, 365594.2040601046, 371163.2270879825, 293308.14814135735, 399152.11782205076]
+maxes4 = [323070.78158223775, 371093.1985241151, 375028.27767589636]
 
 if __name__ == "__main__":
     # simulate initial values
     print("= INITIAL RESISTANCES =\n")
-    resistances = [432837, 409632, 449660, 419437, 401071, 378266, 411354, 402799, 392903, 447375, 401663, 403171, 433107, 404175, 396619]
+    resistances = resistances16
     resistances = [r * 0.23 for r in resistances]
     check([2300e3] + resistances, base_circuit, substitute, True)
     # calculate new values and simulate
     print("\n= IDEAL VALUES =\n")
-    maxes = [462147, 409632, 456646, 457509, 401071, 378266, 467924, 402799, 392903, 466741, 401663, 403171, 475801, 404175, 396619]
+    maxes = maxes4
     maxes = [r * 0.23 for r in maxes]
     r1, resistances = get_new_resistances(maxes, single_wire=True)
     check([r1] + resistances, base_circuit, substitute, True)
@@ -42,7 +65,9 @@ if __name__ == "__main__":
     print("[" + ", ".join(f"{int(r)}" for r in resistances) + "]")
     # simulate actual possible values
     print("\n= ACTUAL POSSIBLE VALUES =\n")
-    resistances = [106282.45292145321, 98372.21176184688, 23031.50883575576, 95099.33838280731, 74263.14521716886, 67446.37266744737, 61403.812109792234, 55454.954148189776, 50508.54053194302, 46116.1950063792, 38519.75146200466, 36771.50436843857, 34561.500017412174, 45379.90752711366, 23347.750615425386]
-    check([r1] + resistances, base_circuit, substitute, True)
+    resistances = actual16
+    threshold = check([r1] + resistances, base_circuit, substitute, True)
     print("\n= WITH EXTRA CAPACITOR =\n")
-    check([r1] + resistances, circuit_with_extra_c, substitute, True)
+    threshold, epsilons = check([r1] + resistances, circuit_with_extra_c, substitute, True)
+    print("\n= ACCURACCY CHECK =\n")
+    compute_epsilons_with_extra_c(threshold, epsilons, [r1] + resistances, circuit_with_extra_c, substitute, single_wire=True)

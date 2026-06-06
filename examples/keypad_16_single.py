@@ -109,7 +109,7 @@ if __name__ == "__main__":
         # },
         resistor_trace_fill_kwargs={
             **default_args(generate_all_geometries)["resistor_trace_fill_kwargs"],
-            "aiming_resistance": 430e3,
+            "aiming_resistance": [430e3, 103636, 94215, 85650, 77863, 70785, 64350, 58500, 53182, 48347, 43952, 39956, 36324, 33021, 30019, 27290, 430e3],
             "learning_rate": 0.1,
             "max_iterations": 300,
             "no_overlap_margin": 2.0,
